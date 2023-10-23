@@ -10,12 +10,29 @@ from reportlab.pdfbase.pdfmetrics import registerFont
 from reportlab.pdfbase.ttfonts import TTFont
 registerFont(TTFont('Arial','ARIAL.ttf'))
 
+sg.theme('reddit') 
+
 registro_vac = []
 registro_personal = []
-layout3 = []
+Extras = []
+Regresan = []
 
 toprow = ['Fecha de Inicio', 'Fecha de Regreso', 'Dias', 'periodo']
+toprow_regresan = ['Cedula', 'Fecha de Reincorporación', 'Dias Disfrutados','Nombre', 'Apellido', 'Dependencia', ]
 rows = []
+rows_regresan = []
+        
+lista_dependencia = []
+temp = db.leer_dependencia() 
+for i in temp:    
+    lista_dependencia.append(f"{i[1]}")   
+lista_dependencia = list(reversed(lista_dependencia))              
+
+lista_cargo = []
+temp = db.leer_cargo() 
+for i in temp:    
+    lista_cargo.append(f"{i[1]}")   
+lista_cargo = list(reversed(lista_cargo))     
 
 def canvax(c, offset, datos, vac):   
     c.setFont("Arial", 11)
@@ -59,7 +76,31 @@ def canvax(c, offset, datos, vac):
     p1.wrapOn(c,580,600)
     p1.drawOn(c,10,405 + offset)
 
+def update_input():
+    window['nombre'].update(inf["nombre"])
+    window['apellido'].update(inf["apellido"])
+    window['coddependencia'].update(inf["coddependencia"])           
+    window['fechaingreso'].update(inf["fechaingreso"])
+    window['vacpendientes'].update(inf["vacpendientes"])
+    window['vacdiaspendientes'].update(inf["vacdiaspendientes"])
+    window['vacultima'].update(inf["vacultima"])
+    window['codcargo'].update(inf["codcargo"])          
+    window['ultimoperiodovac'].update(inf["ultimoperiodovac"])
 
+def clear_input():
+    window['nombre'].update("")
+    window['apellido'].update("")
+    window['coddependencia'].update(values = lista_dependencia)            
+    window['fechaingreso'].update("")
+    window['vacpendientes'].update("")
+    window['vacdiaspendientes'].update("")
+    window['vacultima'].update("")
+    window['codcargo'].update(values = lista_dependencia)                       
+    window['ultimoperiodovac'].update("") 
+    data = []  
+    window['-TABLE-'].update(values=data)  
+
+'''
 ###### registro_personal #####
 registro_personal += [ 
 
@@ -97,7 +138,7 @@ registro_personal += [
      [sg.Button('Agregar')]
 ]
 #######################
-
+'''
 ###### registro_vacaciones #######
 registro_vac += [ 
     
@@ -108,15 +149,15 @@ registro_vac += [
     
     [sg.Text('')], 
 
-    [sg.Text('Cargo:'), sg.Combo(toprow, enable_events=True,  readonly=False, key='codcargo', size=(35,1)),
-     sg.Text('Dependencia:', ), sg.Combo(toprow, enable_events=True,  readonly=False, key='coddependencia', size=(35,1))],
+    [sg.Text('Cargo:'), sg.Combo(lista_cargo, enable_events=True,  readonly=False, key='codcargo', size=(35,1)),
+     sg.Text('Dependencia:', ), sg.Combo(lista_dependencia, default_value="", enable_events=True,  readonly=False, key='coddependencia', size=(35,1))],
     
     [sg.Text('')], 
 
 
    
     [#sg.Text('Tipo Cargo:'), sg.Input(key='tipocargo',size=(12,1)),
-      sg.Text('Fecha de ingreso:'), sg.Input(key='fechaingreso',size=(12,1)),
+      sg.Text('Fecha de ingreso:'), sg.Input(key='fechaingreso',size=(12,1)), sg.CalendarButton('Seleccionar fecha', month_names=('Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'), day_abbreviations=('Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'),close_when_date_chosen=True,  target='fechaingreso', format='%Y-%m-%d', no_titlebar=False, ),
       sg.Text('Ultimo periodo vacaciones:'), sg.Input(key='ultimoperiodovac',size=(12,1)),
       sg.Text('Ultimo Año Vacaciones:'), sg.Input(key='vacultima',size=(12,1)),
       #sg.Text('Mes de ingreso:'), sg.Input(size=(12,1))
@@ -144,8 +185,8 @@ registro_vac += [
 
     #[sg.Text('Contraseña:'),sg.Input(key='reg_cedula',size=(8,1)), 
     [sg.Button('Agregar Nuevo Personal', key="Agregar"), 
-     sg.Button('Editar Personal', key="editpersonal"),
-     sg.Button('Informar', key="Informe")],
+     #sg.Button('Editar Personal', key="editpersonal"),
+     sg.Button('Informe', key="Informe")],
     
     [sg.Text('')], 
     [sg.Text('')], 
@@ -153,13 +194,15 @@ registro_vac += [
 
 ### registrar fecha vacaciones
 registro_vac += [ 
-    [sg.Text('Datos de Vacaciones a Disfrutar', font = (14))],   
+    [sg.Text('Datos de Vacaciones a Disfrutar', font = (14))], 
+
+    [sg.Text('Dias no laborables este año: '), sg.Text(str(len(db.Festivos)))],  
     
      [sg.Text('Dias a disfrutar:', ), sg.Input(key='diasdisfrutados')],
      [sg.Text('Fecha de inicio:', ), sg.Input(key='fechainicio'), sg.Button('Date Popup')],
      [sg.Text('Año a disfrutar'), sg.Input(key='ayodisfrutado',)],
     
-    [sg.Text('Fecha culminacion'), sg.Input(key='fechafin',size=(15,1)),
+    [sg.Text('Fecha Reincorporacio'), sg.Input(key='fechafin',size=(15,1)),
     sg.Text('Ultimo periodo'), sg.Input(key='agregarperiodo',size=(15,1))],
     #sg.Text('Fecha a Incorporarse'), sg.Input(key='fecha-regreso',size=(15,1))],
 
@@ -171,15 +214,84 @@ registro_vac += [
 ]
 ########################
 
+### extra agregar dependencia
+Extras += [ 
+    [sg.Text('Agregar Dependencia', font = (14))],   
+    
+    [sg.Text('Codigo Dependencia:', ), sg.Input(key='codigodependencia')],
+    [sg.Text('Nombre Dependencia:', ), sg.Input(key='nombredependencia')],
+  
+    [sg.Button('Agregar', key="AgregarDependencia"), ],
+    [sg.Text('')], 
+    [sg.Text('')], 
+    ]
+
+### extra agregar cargo
+Extras += [ 
+    [sg.Text('Agregar Cargo', font = (14))],   
+    
+    [sg.Text('Codigo Cargo:', ), sg.Input(key='codigocargo')],
+    [sg.Text('Nombre Cargo:', ), sg.Input(key='nombrecargo')],
+  
+    [sg.Button('Agregar', key="AgregarCargo"), ],
+    [sg.Text('')], 
+    [sg.Text('')], 
+    ]
+#############################
+
+       
+           
+#### proximo a regresar de vacaciones
+tabla = db.leer_personal_vacacion()            
+data_regresan = []
+#print(tabla)
+for i in tabla:  
+    inf_aux = db.leer_informacion(i[0])
+    
+    i.append(inf_aux["nombre"]) 
+    i.append(inf_aux["apellido"])
+    i.append(inf_aux["coddependencia"])    
+    data_regresan.append(i)   
+
+
+
+data_regresan = list(reversed(data_regresan))  
+data_regresan = sorted(data_regresan, key=lambda item: (item[1]))  
+
+
+print(data_regresan)
+
+
+Regresan += [ 
+    [sg.Table(values=data_regresan, headings=toprow_regresan,
+    auto_size_columns=True,
+    display_row_numbers=False,
+    justification='center', key='-TABLE2-',
+    selected_row_colors='red on yellow',
+    enable_events=True,
+    expand_x=False,
+    expand_y=False,
+    enable_click_events=True,
+    size=(2,40))],
+    [sg.Text('')], 
+    [sg.Text('')], 
+    ]
+
+
+###################################
+
+
 menu_def = [ ['Contacto', 'albertespinozav93@gmail.com'], ]
-registro_personal += [[sg.Menu(menu_def)]]
+registro_vac += [[sg.Menu(menu_def)]]
+
 tabgrp = [[sg.TabGroup([ [sg.Tab('Vacaciones', registro_vac, tooltip='Personal details'),
-                         sg.Tab('Personal', registro_personal, tooltip='Personal details'),
-                         sg.Tab('Estac', layout3, tooltip='Personal details'),
+                         sg.Tab('En vacaciones', Regresan, tooltip='Personal details'),
+                         sg.Tab('Extra', Extras, tooltip='Personal details'),
                     
                     ]],)]]  
         
 window = sg.Window('Calculadora de Vacaciones', tabgrp)
+
 
 
 table_inicio = ""
@@ -226,15 +338,7 @@ while True:
     if event == 'BuscarVac':         
         inf = db.leer_informacion(values['cedula'])   
         if(inf == 404):                 
-            window['nombre'].update("")
-            window['apellido'].update("")
-            window['coddependencia'].update("")            
-            window['fechaingreso'].update("")
-            window['vacpendientes'].update("")
-            window['vacdiaspendientes'].update("")
-            window['vacultima'].update("")
-            window['codcargo'].update("")                       
-            window['ultimoperiodovac'].update("")            
+            clear_input()        
 
         else:    
             tabla = db.leer_vacacion(values['cedula'])            
@@ -244,27 +348,19 @@ while True:
                 #i[0], i[4] = i[4], i[0]
                 data.append(i[1:])   
             data = list(reversed(data))              
-            window['-TABLE-'].update(values=data)             
-            
-            window['nombre'].update(inf["nombre"])
-            window['apellido'].update(inf["apellido"])
-            window['coddependencia'].update(inf["coddependencia"])           
-            window['fechaingreso'].update(inf["fechaingreso"])
-            window['vacpendientes'].update(inf["vacpendientes"])
-            window['vacdiaspendientes'].update(inf["vacdiaspendientes"])
-            window['vacultima'].update(inf["vacultima"])
-            window['codcargo'].update(inf["codcargo"])          
-            window['ultimoperiodovac'].update(inf["ultimoperiodovac"])
+            window['-TABLE-'].update(values=data)  
+            update_input()
 
-
-    if event == 'Agregar':        
-        db.crear_informacion(values) 
+    if event == 'Agregar':    
+        if values["cedula"]:    
+           db.crear_informacion(values) 
     
     if event == 'AgregarVacacion':  
         if values["diasdisfrutados"] and values["fechainicio"] and values["cedula"]:            
             nuevavacacion = datetime.strptime(values["fechainicio"], '%Y-%m-%d')    
             hoy = datetime.today()
             fechaduplicada = False
+            # revisamos la base de datos en busca de vacaciones duplicadas
             for i in reversed(db.leer_vacacion(values["cedula"])):    
                 mivacaciones = datetime.strptime(i[2], '%Y-%m-%d')                     
                 if (nuevavacacion <= mivacaciones) or (nuevavacacion <= hoy):
@@ -289,18 +385,34 @@ while True:
             #orden para almacenar en la base de datos
             x = (vacacion, dias, values["ayodisfrutado"],values["agregarperiodo"] , values["cedula"])
             db.actualizar_vacaciones(x)
+           
+            tabla = db.leer_vacacion(values['cedula'])            
+            data = []
+            #print(tabla)
+            for i in tabla:
+                #i[0], i[4] = i[4], i[0]
+                data.append(i[1:])   
+            data = list(reversed(data))              
+            window['-TABLE-'].update(values=data)  
    
-    if event == 'Informe':   
-        if values["-TABLE-"]:
-            roww = values["-TABLE-"][0]  
-            vac = [data[roww][0],data[roww][1],data[roww][3]]        
+    if event == 'Informe':  
         if values["cedula"] and values["-TABLE-"]:
+            roww = values["-TABLE-"][0]  
+            vac = [data[roww][0],data[roww][1],data[roww][3]]  
             c = canvas.Canvas(f'{values["cedula"]}-{values["vacultima"]}({vac[2]}).pdf', pagesize=letter)
             canvax(c, 0, values, vac)
             canvax(c, -400,values, vac)
             c.showPage()
             c.save()
    
+    if event == 'AgregarDependencia':    
+        if values["codigodependencia"] and values["nombredependencia"]:    
+           db.crear_dependencia(values) 
+   
+    if event == 'AgregarCargo':    
+        if values["codigocargo"] and values["nombrecargo"]:    
+           db.crear_cargo(values) 
+    
     '''
     if event[:2] == ('-TABLE-', '+CLICKED+'):
         row, col = position = event[2]

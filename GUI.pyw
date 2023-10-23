@@ -1,3 +1,7 @@
+'''
+Albert Espinoza 2023
+albertespinozav93@gmail.com
+'''
 import PySimpleGUI as sg
 import main as db
 from datetime import timedelta, date, datetime

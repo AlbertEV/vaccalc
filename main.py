@@ -1,5 +1,6 @@
 '''
-
+Albert Espinoza 2023
+albertespinozav93@gmail.com
 '''
 
 import numpy as np
@@ -57,12 +58,14 @@ def crear_base_de_datos():
                             )""")
       
         conexion.execute("""create table dependencia (                                  
-                                  cod text,                                    
+                                  cod text primary key unique,    
+                                  nombre text,                                
                                   descripcion text 
                             )""")
        
         conexion.execute("""create table cargo (                                  
-                                  cod text,                                   
+                                  cod text primary key unique,  
+                                  nombre text,                                 
                                   descripcion text 
                             )""")
 
@@ -75,8 +78,6 @@ def crear_base_de_datos():
 ##### CRUD Operation #########
 
 def crear_informacion(inf):  
-   
-
     try:
         ingreso = inf["fechaingreso"][4:]
         nuevoincremento = datetime.strptime(f'{int(datetime.now().year-1)}{ingreso}', '%Y-%m-%d').date()
@@ -163,6 +164,81 @@ def leer_vacacion(cedula):
     except (sqlite3.OperationalError,IndexError) as e:
         print(e)
         return 404
+
+def crear_dependencia(inf):  
+    try: 
+        conexion=sqlite3.connect(nombre_db)   
+        conexion.execute("insert into dependencia(cod,nombre) values (?,?)"
+            ,(  inf["codigodependencia"],   
+                inf["nombredependencia"],  
+                ))
+        conexion.commit()
+        conexion.close()
+    except (sqlite3.OperationalError, sqlite3.IntegrityError, IndexError) as e:
+        print("My Error COD: ", e)
+        return 404
+
+def leer_dependencia():
+    try:
+        conexion=sqlite3.connect(nombre_db)
+        cursor=conexion.execute(f"SELECT cod, nombre FROM dependencia")
+        cursor.row_factory = sqlite3.Row
+        c = []
+        for i in cursor.fetchall():
+            c.append(list(i))
+        #c = list(cursor.fetchall()[1])
+        conexion.close()
+        return c
+    except (sqlite3.OperationalError,IndexError) as e:
+        print(e)
+        return 404
+
+def crear_cargo(inf):  
+    try:   
+        conexion=sqlite3.connect(nombre_db)   
+        conexion.execute("insert into cargo(cod,nombre) values (?,?)"
+            ,(  inf["codigocargo"],   
+                inf["nombrecargo"],  
+                ))
+        conexion.commit()
+        conexion.close()
+    except (sqlite3.OperationalError, sqlite3.IntegrityError, IndexError) as e:
+        print("My Error COD: ", e)
+        return 404
+
+def leer_cargo():
+    try:
+        conexion=sqlite3.connect(nombre_db)
+        cursor=conexion.execute(f"SELECT cod, nombre FROM cargo")
+        cursor.row_factory = sqlite3.Row
+        c = []
+        for i in cursor.fetchall():
+            c.append(list(i))
+        #c = list(cursor.fetchall()[1])
+        conexion.close()
+        return c
+    except (sqlite3.OperationalError,IndexError) as e:
+        print(e)
+        return 404
+
+def leer_personal_vacacion():
+    try:
+        conexion=sqlite3.connect(nombre_db)
+        cursor=conexion.execute(f"SELECT cedula, fechafin, diasdisfrutados FROM vacaciones")
+        cursor.row_factory = sqlite3.Row
+        c = []
+        datehoy = datetime.now()
+        for i in cursor.fetchall():
+            fecha_comprobacion = datetime.strptime(str(i[1]), '%Y-%m-%d')  
+            if fecha_comprobacion >= datehoy:                
+                c.append(list(i))
+        #c = list(cursor.fetchall()[1])
+        conexion.close()
+        return c
+    except (sqlite3.OperationalError,IndexError) as e:
+        print(e)
+        return 404
+
 ################################
 
 def incrementar_vacacion():
@@ -174,10 +250,10 @@ def incrementar_vacacion():
             for i in cursor.fetchall():
                 c.append(list(i))
             #c = list(cursor.fetchall()[1])
+            datehoy = datetime.now() # datetime.strptime("2031-10-11", '%Y-%m-%d') # datetime.now()
             for i in c:
                 #print(i)
-                fecha_comprobacion = datetime.strptime(str(i[4]), '%Y-%m-%d')
-                datehoy = datetime.strptime("2031-10-11", '%Y-%m-%d') # datetime.now()
+                fecha_comprobacion = datetime.strptime(str(i[4]), '%Y-%m-%d')               
                 x = datehoy - fecha_comprobacion                                                                
                 if x.days > 365: 
                            sql = ''' UPDATE personal
@@ -199,6 +275,7 @@ def incrementar_vacacion():
     
 crear_base_de_datos()
 incrementar_vacacion()
+leer_personal_vacacion()
 
 ayo = str(date.today().strftime("%Y"))
 
